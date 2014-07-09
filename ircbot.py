@@ -9,7 +9,7 @@ class IrcBot():
     def __init__(self):
         self.loopfuncs = []
         self.socket = socket.socket()
-        self.name = "cmendiceman"
+        self.name = "cmendriceman"
         self.password = "noxalia"
         self.server = ("irc.freenode.net", 6667)
         self.channels = ['#notahashtag']
@@ -18,6 +18,8 @@ class IrcBot():
         self.send("USER %(n)s %(n)s %(n)s : %(n)s" % {'n':self.name})
         self.connected = False
         #self.send(
+
+    def loop(self):
         while True:
             buf = self.socket.recv(4096)
             lines = buf.decode('UTF-8').split("\n")
@@ -66,8 +68,8 @@ class IrcBot():
         
 class HelpBot(IrcBot):
     ''' Not actually helpful. '''
-    def __init__(self):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.loopfuncs.append(self.help) #there probably exists a more implicit way to do this
         
     def help(self, m):
@@ -77,8 +79,8 @@ class HelpBot(IrcBot):
       
 class DiceBot(IrcBot):
     ''' an 18! what are the odds? '''
-    def __init__(self):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.loopfuncs.append(self.dice)
         
     def dice(self, m):
@@ -101,25 +103,28 @@ class DiceBot(IrcBot):
             try:
                 output = str(ast.literal_eval(msg))
             except:
-                return chr(1) + "ACTION softly poots", m['target']
+                return "\u0001ACTION softly poots\u0001", m['target']
             return "rolled: "+msg+" = "+output, m['target']
             
 class ChatterBot(HelpBot):
     ''' A general purpose chattering bot. Inheirits from HelpBot '''
-    def __init__(self):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.loopfuncs.append(self.didsomebodysay)
             
     def didsomebodysay(self, m):
         msg = m['msg']
-        for w in msg.split():
-            if random.randrange(1000) < len(w)-6:
-                return 'DID SOMEBODY SAY "'+w.upper()+'"??????', m['target']
+        if m['target'] != self.name: 
+            for w in msg.split():
+               if w[-3:] == 'ing' and random.randrange(100) < len(w)-5:
+                    self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', m['target'])
+                    return "\u0001ACTION puts on "+w+" robe\u0001", m['target']
+                    
         
 
 if __name__ == "__main__":
     class CmenBot(ChatterBot, DiceBot):
-    ''' Our beloved cmenbot <3 '''
-    pass
-    CmenBot()
+        ''' Our beloved cmenbot <3 '''
+        pass
     
+    CmenBot().loop()
