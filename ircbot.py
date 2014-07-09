@@ -9,7 +9,7 @@ class IrcBot():
     def __init__(self):
         self.loopfuncs = []
         self.socket = socket.socket()
-        self.name = "cmendriceman"
+        self.name = "cmenlord2"
         self.password = "noxalia"
         self.server = ("irc.freenode.net", 6667)
         self.channels = ['#notahashtag']
@@ -55,7 +55,7 @@ class IrcBot():
         
     def say(self, msg, *to):
         if not to:
-            to = self.channels[0]
+            to = self.channels
         for channel in to:
             self.send("PRIVMSG " + channel + " :" + msg)
         
@@ -67,10 +67,10 @@ class IrcBot():
         #self.socket.recv(4096)
         
 class HelpBot(IrcBot):
-    ''' Not actually helpful. '''
+    ''' Not actually helpful. The hello world of botting.'''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.append(self.help) #there probably exists a more implicit way to do this
+        self.loopfuncs.extend([self.help]) #there probably exists a more implicit way to do this
         
     def help(self, m):
         if "!help" in m['msg']:
@@ -81,7 +81,7 @@ class DiceBot(IrcBot):
     ''' an 18! what are the odds? '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.append(self.dice)
+        self.loopfuncs.extend([self.dice])
         
     def dice(self, m):
         msg = m['msg']
@@ -110,7 +110,8 @@ class ChatterBot(HelpBot):
     ''' A general purpose chattering bot. Inheirits from HelpBot '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.append(self.didsomebodysay)
+        self.loopfuncs.extend([self.didsomebodysay, self.botsay, self.wearing])
+        self.clothes = "nothing at all"
             
     def didsomebodysay(self, m):
         msg = m['msg']
@@ -118,8 +119,39 @@ class ChatterBot(HelpBot):
             for w in msg.split():
                if w[-3:] == 'ing' and random.randrange(100) < len(w)-5:
                     self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', m['target'])
-                    return "\u0001ACTION puts on "+w+" robe\u0001", m['target']
-                    
+                    clothing = random.choice(['robe', 'boots', 'pants', 'gloves',
+                                              'hat', 'shirt', 'codpiece'])
+                    w = w.lower()
+                    self.clothes = "my %s %s" % (w, clothing)
+                    return "\u0001ACTION puts on his "+w+" "+clothing+"\u0001", m['target']
+
+    def wearing(self, m):
+        '''what are you wearing?'''
+        if "wearing" in m['msg'].lower() and self.name in m['msg'].lower():
+            return "I'm wearing " + self.clothes + "!", m['target']
+
+    def botsay(self, m):
+        ''' message the bot a channel name and message and it respond accordingly '''
+        msg = m['msg']
+        if m['target'] == self.name:
+            if msg[0] == "#":
+                channel = msg.split()[0]
+                return msg[len(channel)+1:], channel
+            
+
+class EvalBot(IrcBot):
+    ''' uh oh. '''
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.loopfuncs.extend([self.eval_msg])
+
+    def eval_msg(self, m):
+        msg = m['msg']
+        if msg[0] == '@':
+            try: 
+                return str(eval(msg[1:])), m['target']
+            except:
+                return "\u0001ACTION softly poots\u0001", m['target']
         
 
 if __name__ == "__main__":
