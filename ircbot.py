@@ -76,7 +76,32 @@ class HelpBot(IrcBot):
         if "!help" in m['msg']:
             print("triggered help")
             return "Help yourself, asshole.", m['target']
-      
+
+class EvalBot(IrcBot):
+    ''' Error handling and mischief for bots. '''
+    import ast
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.loopfuncs.extend([self.eval_msg])
+        self.errormsg = "\u0001ACTION softly poots\u0001"
+
+    def bot_eval(self, msg):
+        try:
+            return str(eval(msg))
+        except:
+            return self.errormsg
+
+    def bot_literal_eval(self, msg):
+        try:
+            return str(self.ast.literal_eval(msg))
+        except:
+            return self.errormsg
+        
+    def eval_msg(self, m):
+        msg = m['msg']
+        if msg[0] == '@':
+            return self.bot_eval(msg), m['target']
+        
 class DiceBot(IrcBot):
     ''' an 18! what are the odds? '''
     def __init__(self, **kwargs):
@@ -131,28 +156,18 @@ class ChatterBot(HelpBot):
             return "I'm wearing " + self.clothes + "!", m['target']
 
     def botsay(self, m):
-        ''' message the bot a channel name and message and it respond accordingly '''
+        ''' #! to msg all channels. #target to message that target. '''
         msg = m['msg']
         if m['target'] == self.name:
             if msg[0] == "#":
-                channel = msg.split()[0]
-                return msg[len(channel)+1:], channel
-            
+                target = msg[1:].split()[0]
+                print(target)
+                if target == '!':
+                    print("WWW")
+                    self.say(msg[len(target)+2:])
+                else:
+                    return msg[len(target)+2:], target
 
-class EvalBot(IrcBot):
-    ''' uh oh. '''
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.loopfuncs.extend([self.eval_msg])
-
-    def eval_msg(self, m):
-        msg = m['msg']
-        if msg[0] == '@':
-            try: 
-                return str(eval(msg[1:])), m['target']
-            except:
-                return "\u0001ACTION softly poots\u0001", m['target']
-        
 
 if __name__ == "__main__":
     class CmenBot(ChatterBot, DiceBot):
