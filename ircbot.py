@@ -2,10 +2,12 @@
 #(in ascending order of cool)
 
 import socket
+import random
+import ast
 
 class IrcBot():
     def __init__(self):
-        self.parser = Parser()
+        self.loopfuncs = []
         self.socket = socket.socket()
         self.name = "cmendiceman"
         self.password = "noxalia"
@@ -39,7 +41,7 @@ class IrcBot():
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
                 
-                for func in self.parser.funcs:
+                for func in self.loopfuncs:
                     output = func(m)
                     if output:
                         self.say(*output)
@@ -62,17 +64,23 @@ class IrcBot():
    
         #self.socket.recv(4096)
         
-class Parser():
+class HelpBot(IrcBot):
+    ''' Not actually helpful. '''
     def __init__(self):
-        self.funcs = [self.help, self.dice, self.didsomebodysay]
-    
+        super().__init__(*args, **kwargs)
+        self.loopfuncs.append(self.help) #there probably exists a more implicit way to do this
+        
     def help(self, m):
         if "!help" in m['msg']:
             print("triggered help")
             return "Help yourself, asshole.", m['target']
       
-    import random
-    import ast
+class DiceBot(IrcBot):
+    ''' an 18! what are the odds? '''
+    def __init__(self):
+        super().__init__(*args, **kwargs)
+        self.loopfuncs.append(self.dice)
+        
     def dice(self, m):
         msg = m['msg']
         nums = '0123456789'
@@ -88,17 +96,26 @@ class Parser():
                 die = msg[i+1:end]
                 start = end
                 if die and die[0] != '0':
-                    msg = msg[:i]+'('+str(self.random.randrange(int(die))+1)+')'+msg[end:]
+                    msg = msg[:i]+'('+str(random.randrange(int(die))+1)+')'+msg[end:]
                     start += 1
             try:
-                output = str(self.ast.literal_eval(msg))
+                output = str(ast.literal_eval(msg))
             except:
                 return chr(1) + "ACTION softly poots", m['target']
             return "rolled: "+msg+" = "+output, m['target']
+            
+def ChatterBot(HelpBot):
+    ''' A general purpose chattering bot. Inheirits from HelpBot '''
+    def __init__(self):
+        super().__init__(*args, **kwargs)
+        self.loopfuncs.append(self.didsomebodysay)
+            
     def didsomebodysay(self, m):
         msg = m['msg']
         for w in msg.split():
-            if self.random.randrange(1000) < len(w)-6:
+            if random.randrange(1000) < len(w)-6:
                 return 'DID SOMEBODY SAY "'+w.upper()+'"??????', m['target']
         
-IrcBot()
+def CmenBot(ChatterBot, DiceBot):
+    ''' Our beloved cmenbot <3 '''
+    pass
