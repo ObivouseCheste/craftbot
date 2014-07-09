@@ -104,7 +104,7 @@ class DiceBot(IrcBot):
                 return chr(1) + "ACTION softly poots", m['target']
             return "rolled: "+msg+" = "+output, m['target']
             
-def ChatterBot(HelpBot):
+class ChatterBot(HelpBot):
     ''' A general purpose chattering bot. Inheirits from HelpBot '''
     def __init__(self):
         super().__init__(*args, **kwargs)
@@ -116,6 +116,10 @@ def ChatterBot(HelpBot):
             if random.randrange(1000) < len(w)-6:
                 return 'DID SOMEBODY SAY "'+w.upper()+'"??????', m['target']
         
-def CmenBot(ChatterBot, DiceBot):
+
+if __name__ == "__main__":
+    class CmenBot(ChatterBot, DiceBot):
     ''' Our beloved cmenbot <3 '''
     pass
+    CmenBot()
+    
