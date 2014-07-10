@@ -1,5 +1,5 @@
 #by sockman, cheem, and wizzeh :)
-#(in ascending order of cool)
+#(in no particular order of coolness)
 
 import socket
 import random
@@ -9,7 +9,7 @@ class IrcBot():
     def __init__(self):
         self.loopfuncs = []
         self.socket = socket.socket()
-        self.name = "cmenlord2"
+        self.name = "breakthisbot2"
         self.password = "noxalia"
         self.server = ("irc.freenode.net", 6667)
         self.channels = ['#notahashtag']
@@ -42,11 +42,10 @@ class IrcBot():
                 m['type']   = args[1]
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
+                self.m = m
                 
                 for func in self.loopfuncs:
-                    output = func(m)
-                    if output:
-                        self.say(*output)
+                    func()
 
     def send(self, msg):
         #appropriate place to encode
@@ -70,12 +69,13 @@ class HelpBot(IrcBot):
     ''' Not actually helpful. The hello world of botting.'''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.extend([self.help]) #there probably exists a more implicit way to do this
+        self.loopfuncs.extend([self.help])
+        #there probably exists a more implicit way to do this
         
-    def help(self, m):
-        if "!help" in m['msg']:
+    def help(self):
+        if "!help" in self.m['msg']:
             print("triggered help")
-            return "Help yourself, asshole.", m['target']
+            self.say("Help yourself, asshole.", self.m['target'])
 
 class EvalBot(IrcBot):
     ''' Error handling and mischief for bots. '''
@@ -85,7 +85,7 @@ class EvalBot(IrcBot):
         self.loopfuncs.extend([self.eval_msg])
         self.errormsg = "\u0001ACTION softly poots\u0001"
 
-    def bot_eval(self, msg):
+    def bot_eval(msg):
         try:
             return str(eval(msg))
         except:
@@ -97,10 +97,10 @@ class EvalBot(IrcBot):
         except:
             return self.errormsg
         
-    def eval_msg(self, m):
-        msg = m['msg']
+    def eval_msg(self):
+        msg = self.m['msg']
         if msg[0] == '@':
-            return self.bot_eval(msg), m['target']
+            self.say(self.bot_eval(msg), self.m['target'])
         
 class DiceBot(IrcBot):
     ''' an 18! what are the odds? '''
@@ -108,8 +108,8 @@ class DiceBot(IrcBot):
         super().__init__(**kwargs)
         self.loopfuncs.extend([self.dice])
         
-    def dice(self, m):
-        msg = m['msg']
+    def dice(self):
+        msg = self.m['msg']
         nums = '0123456789'
         if msg[0:5] == "roll ":
             msg = msg[5:]
@@ -128,8 +128,8 @@ class DiceBot(IrcBot):
             try:
                 output = str(ast.literal_eval(msg))
             except:
-                return "\u0001ACTION softly poots\u0001", m['target']
-            return "rolled: "+msg+" = "+output, m['target']
+                self.say("\u0001ACTION softly poots\u0001", self.m['target'])
+            self.say("rolled: "+msg+" = "+output, self.m['target'])
             
 class ChatterBot(HelpBot):
     ''' A general purpose chattering bot. Inheirits from HelpBot '''
@@ -138,27 +138,28 @@ class ChatterBot(HelpBot):
         self.loopfuncs.extend([self.didsomebodysay, self.botsay, self.wearing])
         self.clothes = "nothing at all"
             
-    def didsomebodysay(self, m):
-        msg = m['msg']
-        if m['target'] != self.name: 
+    def didsomebodysay(self):
+        msg = self.m['msg']
+        if self.m['target'] != self.name: 
             for w in msg.split():
                if w[-3:] == 'ing' and random.randrange(100) < len(w)-5:
-                    self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', m['target'])
+                    self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', self.m['target'])
                     clothing = random.choice(['robe', 'boots', 'pants', 'gloves',
                                               'hat', 'shirt', 'codpiece'])
                     w = w.lower()
                     self.clothes = "my %s %s" % (w, clothing)
-                    return "\u0001ACTION puts on his "+w+" "+clothing+"\u0001", m['target']
+                    self.say("\u0001ACTION puts on his "+w+" "
+                             +clothing+"\u0001", self.m['target'])
 
-    def wearing(self, m):
+    def wearing(self):
         '''what are you wearing?'''
-        if "wearing" in m['msg'].lower() and self.name in m['msg'].lower():
-            return "I'm wearing " + self.clothes + "!", m['target']
+        if "wearing" in self.m['msg'].lower() and self.name in self.m['msg'].lower():
+            self.say("I'm wearing " + self.clothes + "!", self.m['target'])
 
-    def botsay(self, m):
+    def botsay(self):
         ''' #! to msg all channels. #target to message that target. '''
-        msg = m['msg']
-        if m['target'] == self.name:
+        msg = self.m['msg']
+        if self.m['target'] == self.name:
             if msg[0] == "#":
                 target = msg[1:].split()[0]
                 print(target)
@@ -166,7 +167,7 @@ class ChatterBot(HelpBot):
                     print("WWW")
                     self.say(msg[len(target)+2:])
                 else:
-                    return msg[len(target)+2:], target
+                    self.say(msg[len(target)+2:], target)
 
 
 if __name__ == "__main__":
