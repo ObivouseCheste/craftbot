@@ -42,6 +42,10 @@ class IrcBot():
                 m['type']   = args[1]
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
+                
+                if m['target'] == self.name
+                    m['target'] == m['sender']
+                
                 self.m = m
                 
                 for func in self.loopfuncs:
