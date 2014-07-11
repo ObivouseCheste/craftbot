@@ -1,13 +1,14 @@
 #from amde with butts
 
-import ircbot
+from ircbot import IrcBot
+import random
 
 class ButtBot(IrcBot):
 	''' does the butts '''
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		self.dobutt = True
-		self.loopfuncs.extend([self.butt, self.tipbutt])
+		self.loopfuncs += [self.butt, self.tipbutt]
 
 	def makebutt(self, w):
 		if len(w) > 3:
@@ -48,8 +49,4 @@ class ButtBot(IrcBot):
 				self.dobutt = True
 
 if __name__ == "__main__":
-	class CmenBot(ButtBot):
-		''' Our beloved cmenbot <3 '''
-		pass
-	
-	CmenBot().loop()
+	ButtBot(name="buttbot").loop()
