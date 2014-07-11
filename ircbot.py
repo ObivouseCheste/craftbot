@@ -6,10 +6,10 @@ import random
 import ast
 
 class IrcBot():
-    def __init__(self):
+    def __init__(self, name="cmenbot"):
         self.loopfuncs = []
         self.socket = socket.socket()
-        self.name = "breakthisbot2"
+        self.name = name
         self.password = "noxalia"
         self.server = ("irc.freenode.net", 6667)
         self.channels = ['#notahashtag']
