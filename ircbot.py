@@ -42,7 +42,7 @@ class IrcBot():
                 m['msg']    = args[3][1:]
 
                 if m['target'] == self.name:
-                    m['target'] == m['sender']
+                    m['target'] = m['sender']
                 
                 self.m = m
                 
