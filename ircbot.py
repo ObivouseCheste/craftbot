@@ -19,6 +19,7 @@ class IrcBot():
         #self.send(
 
     def loop(self):
+        self.connect()
         while True:
             buf = self.socket.recv(4096)
             lines = buf.decode('UTF-8').split("\n")
@@ -35,9 +36,9 @@ class IrcBot():
                     continue
                 m = {}
                 m['sender'] = args[0][1:]
-                m['type'] = args[1]
+                m['type']   = args[1]
                 m['target'] = args[2]
-                m['msg'] = args[3][1:]
+                m['msg']    = args[3][1:]
 
                 if m['target'] == self.name:
                     m['target'] == m['sender']
@@ -140,7 +141,7 @@ class ChatterBot(HelpBot):
             
     def didsomebodysay(self):
         msg = self.m['msg']
-        if self.m['target'] != self.name:
+        if self.m['target'] != self.name: 
             for w in msg.split():
                if w[-3:] == 'ing' and random.randrange(100) < len(w)-5:
                     self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', self.m['target'])
