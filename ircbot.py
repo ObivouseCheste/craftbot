@@ -6,12 +6,13 @@ import random
 import ast
 
 class IrcBot():
-    def __init__(self, name="cmenbot", channels=['#notahashtag']):
+    def __init__(self, name="cmenbot", channels=['#notahashtag'],
+                 port=6666):
         self.loopfuncs = []
         self.socket = socket.socket()
         self.name = name
         self.password = "noxalia"
-        self.server = ("irc.freenode.net", 6667)
+        self.server = ("irc.freenode.net", port)
         self.channels = channels
         self.socket.connect(self.server)
         self.send("NICK " + self.name)
@@ -41,7 +42,7 @@ class IrcBot():
                 m['msg']    = args[3][1:]
 
                 if m['target'] == self.name:
-                    m['target'] == m['sender']
+                    m['target'] = m['sender']
                 
                 self.m = m
                 
