@@ -8,14 +8,14 @@ class GuessBot(IrcBot):
     ''' guess a number between 1 and 100! '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.append(self.initiate)
+        self.loopfuncs.append(self.guessgame)
         self.mynum = 0
-    def initiate(self):
+    def guessgame(self):
         msg = self.m['msg']
         if msg == "!initiate guess":
             print("Game initiation received")
             self.loopfuncs.append(self.guess)
-            self.mynum = random.randrange(100)
+            self.mynum = random.randrange(1,101)
             print("My number is " + str(self.mynum))
             self.loopfuncs.remove(self.initiate)
             self.say("I've thought of a number between 1 and 100. Guess with '!guess number'!", self.m['target'])
@@ -44,17 +44,12 @@ class AcrotopiaBot(IrcBot):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loopfuncs.append(self.initiate)
+        self.loopfuncs.append(self.acrogame)
         self.sequence = []
         self.players = []
         self.submits = []
         self.points = []
-        self.adjectives = ["fabulous", "snazzy", "wondrous", "zany", 
-        "funny-smelling", "tubular", "gnarly", ]
-        self.synonyms = ["submission", "acronym", "sentence-like monstrosity", 
-        "amalgamation of wordish things"]
-        self.interject = ["Wow", "Wicked", "Okay I guess", "Snazzy"]
-    def initiate(self):
+    def acrogame(self):
         letters = list("abcdefghijklmnopqrstuvwxyz")
         if self.m['msg'] == "!initiate acrotopia":
             print("Game initiation received")
@@ -109,12 +104,6 @@ class AcrotopiaBot(IrcBot):
                 self.points.append(0)
 
     def end(self):
-        self.adjectives = ["fabulous", "classy", "wibbly-wobbly", "bonkers", 
-            "hippity-hoppity", "snazzy", "wondrous", "zany", "funny-smelling", 
-            "tubular", "gnarly", ]
-        self.synonyms = ["submission", "acronym", "sentence-like monstrosity", 
-        "amalgamation of wordish things"]
-        self.interject = ["Wow", "Wicked", "Okay I guess", "Snap", "WOW, DUDE"]
         if self.m['msg'] == "!endsubmit":
             self.loopfuncs.remove(self.submit)
             self.loopfuncs.remove(self.end)
