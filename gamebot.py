@@ -18,7 +18,7 @@ class GuessBot(IrcBot):
             self.mynum = random.randrange(100)
             print("My number is " + str(self.mynum))
             self.loopfuncs.remove(self.initiate)
-            self.say("I've thought of a number between 1 and 100. Guess with 'guess number'!", self.m['target'])
+            self.say("I've thought of a number between 1 and 100. Guess with '!guess number'!", self.m['target'])
     def guess(self):
         msg = self.m['msg']
         if msg[0:7] == "!guess ":
@@ -30,7 +30,10 @@ class GuessBot(IrcBot):
                     self.say("That's correct!", self.m['target'])
                 elif int(msg) > 100:
                     self.say("That's WAY too high. Do you need some !help?", self.m['target'])
-                elif int(msg) > self.mynum and 
+                elif int(msg) > self.mynum and int(msg) < 101:
+                    self.say("Bit too high.", self.m['target'])
+                elif int(msg) < self.mynum and int(msg) > 0:
+                    self.say("Bit too low.", self.m['target'])
             except:
                 self.say("I'm afraid you didn't give me a number.")
 class AcrotopiaBot(IrcBot):
