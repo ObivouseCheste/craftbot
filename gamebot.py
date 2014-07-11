@@ -166,4 +166,4 @@ if __name__ == "__main__":
     class GameBot(AcrotopiaBot, GuessBot):
         ''' all games '''
         pass
-    GameBot().loop()
+    GameBot(name="cmengamebot").loop()
