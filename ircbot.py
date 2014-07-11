@@ -6,17 +6,16 @@ import random
 import ast
 
 class IrcBot():
-    def __init__(self, name="cmenbot"):
+    def __init__(self, name="cmenbot", channels=['#notahashtag']):
         self.loopfuncs = []
         self.socket = socket.socket()
         self.name = name
         self.password = "noxalia"
         self.server = ("irc.freenode.net", 6667)
-        self.channels = ['#notahashtag']
+        self.channels = channels
         self.socket.connect(self.server)
         self.send("NICK " + self.name)
         self.send("USER %(n)s %(n)s %(n)s : %(n)s" % {'n':self.name})
-        self.connected = False
         #self.send(
 
     def loop(self):
@@ -28,12 +27,9 @@ class IrcBot():
                 print("<--", data)
                 if not data:
                     continue
-                if data.find('PING') != -1:
+                if 'PING' in data:
                     n = data.split(':')[1]
                     self.send('PONG :' + n)
-                    if self.connected == False:
-                        self.connect()
-                        self.connected = True
                 args = data.split(None, 3)
                 if len(args) != 4:
                     continue
@@ -42,7 +38,7 @@ class IrcBot():
                 m['type']   = args[1]
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
-                
+
                 if m['target'] == self.name:
                     m['target'] == m['sender']
                 
