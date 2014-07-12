@@ -11,6 +11,9 @@ class RoamBot(IrcBot):
         self.joinodds = jo
         self.partodds = po
 
+    def connect(self):
+        self.send("MODE " + self.name + "+x")
+
     def send(self, msg):
         super().send(msg)
         if "PONG" in msg:
