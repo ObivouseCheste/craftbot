@@ -18,7 +18,7 @@ class GuessBot(IrcBot):
             self.mynum = random.randrange(1,101)
             print("My number is " + str(self.mynum))
             self.loopfuncs.remove(self.initiate)
-            self.say("I've thought of a number between 1 and 100. Guess with '!guess number'!", self.m['target'])
+            self.say("I've thought of a number between 1 and 100. Guess with '!guess <number>'!", self.m['target'])
     def guess(self):
         msg = self.m['msg']
         if msg[0:7] == "!guess ":
@@ -37,9 +37,9 @@ class GuessBot(IrcBot):
             except:
                 self.say("I'm afraid you didn't give me a number.")
 class AcrotopiaBot(IrcBot):
-    ''' acrotopia bot. gives from 4 to 7 random letters and players make an 
+    ''' acrotopia bot. gives from 4 to 7 random letters and players make an
     acronym from them'''
-    ''' !initiate begins the game. !play <acronym submission> submits. 
+    ''' !initiate begins the game. !play <acronym submission> submits.
     !endsubmit begins voting. !vote <number> votes.'''
 
     def __init__(self, **kwargs):
@@ -54,10 +54,10 @@ class AcrotopiaBot(IrcBot):
         if self.m['msg'] == "!initiate acrotopia":
             print("Game initiation received")
             self.loopfuncs.append(self.submit)
-            self.loopfuncs.remove(self.initiate) 
+            self.loopfuncs.remove(self.initiate)
             ''' remove ability to start a new game and then get 4-7 letters '''
-            for i in range(1,random.randrange(5,9)): 
-                self.sequence.append(letters[random.randrange(0,26)]) 
+            for i in range(1,random.randrange(5,9)):
+                self.sequence.append(letters[random.randrange(0,26)])
             self.say("Let's play Acrotopia! Just give me an acronym made from my"
             +" sequence: " + " ".join(self.sequence), self.m['target'])
             self.say("To submit your acronym, just begin your message with !play"
@@ -109,7 +109,7 @@ class AcrotopiaBot(IrcBot):
             self.loopfuncs.remove(self.end)
             self.loopfuncs.append(self.initiate)
             self.say("Alright! The submission phase is over. Here's all I have: ", self.m['target'])
-            
+
             for i in range(len(self.players)):
                 print(self.players[i])
                 adjran = random.choice(self.adjectives)
@@ -138,7 +138,7 @@ class AcrotopiaBot(IrcBot):
                         return
                 except:
                     self.say("That's not a valid vote.", self.m['target'])
-            else: 
+            else:
                 self.say("You've already voted.", self.m['target'])
     def endvote(self):
         if self.m['msg'] == "!endvote":
