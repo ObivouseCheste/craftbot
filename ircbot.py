@@ -41,10 +41,10 @@ class IrcBot():
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
 
-                if m['target'] == self.name:
-                    m['target'] = m['sender']
                 if "!~" in m['sender']:
                     m['sender'] = [0:m['sender'].find("!~")]
+                if m['target'] == self.name:
+                    m['target'] = m['sender']
 
                 self.m = m
 

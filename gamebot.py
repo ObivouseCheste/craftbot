@@ -65,7 +65,6 @@ class AcrotopiaBot(IrcBot):
     def submit(self):
         msg = self.m['msg']
         sent = self.m['sender']
-        sent = sent[0:self.m['sender'].find("!")]
         if msg[0:6] == "!play ":
             msg = msg[6:]
             if sent not in self.players:
@@ -121,7 +120,6 @@ class AcrotopiaBot(IrcBot):
     def vote(self):
         msg = self.m['msg']
         sent = self.m['sender']
-        sent = sent[0:self.m['sender'].find("!")]
         voters = []
         if msg[0:6] == "!vote ":
             msg = msg[6:]
