@@ -42,10 +42,10 @@ class IrcBot():
                 m['msg']    = args[3][1:]
 
                 if m['target'] == self.name:
-                    m['target'] = m['sender']
-                
+                    m['target'] = m['sender'][0:self.m['sender'].find("!~")]
+
                 self.m = m
-                
+
                 for func in self.loopfuncs:
                     func()
 
@@ -53,27 +53,27 @@ class IrcBot():
         #appropriate place to encode
         print("-->", msg)
         self.socket.send(("%s \r\n" % msg).encode('UTF-8'))
-        
+
     def say(self, msg, *to):
         if not to:
             to = self.channels
         for channel in to:
             self.send("PRIVMSG " + channel + " :" + msg)
-        
+
     def connect(self):
         self.send("MODE " + self.name + "+x")
         for c in self.channels:
             self.send("JOIN " + c)
-   
+
         #self.socket.recv(4096)
-        
+
 class HelpBot(IrcBot):
     ''' Not actually helpful. The hello world of botting.'''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.loopfuncs.extend([self.help])
         #there probably exists a more implicit way to do this
-        
+
     def help(self):
         if "!help" in self.m['msg']:
             print("triggered help")
@@ -98,18 +98,18 @@ class EvalBot(IrcBot):
             return str(self.ast.literal_eval(msg))
         except:
             return self.errormsg
-        
+
     def eval_msg(self):
         msg = self.m['msg']
         if msg[0] == '@':
             self.say(self.bot_eval(msg), self.m['target'])
-        
+
 class DiceBot(IrcBot):
     ''' an 18! what are the odds? '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.loopfuncs.extend([self.dice])
-        
+
     def dice(self):
         msg = self.m['msg']
         nums = '0123456789'
@@ -121,7 +121,7 @@ class DiceBot(IrcBot):
                 end = i+1
                 while end < len(msg) and msg[end] in nums:
                     end += 1
-                    
+
                 die = msg[i+1:end]
                 start = end
                 if die and die[0] != '0':
@@ -132,17 +132,17 @@ class DiceBot(IrcBot):
             except:
                 self.say("\u0001ACTION softly poots\u0001", self.m['target'])
             self.say("rolled: "+msg+" = "+output, self.m['target'])
-            
+
 class ChatterBot(HelpBot):
     ''' A general purpose chattering bot. Inheirits from HelpBot '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.loopfuncs.extend([self.didsomebodysay, self.botsay, self.wearing])
         self.clothes = "nothing at all"
-            
+
     def didsomebodysay(self):
         msg = self.m['msg']
-        if self.m['target'] != self.name: 
+        if self.m['target'] != self.name:
             for w in msg.split():
                if w[-3:] == 'ing' and random.randrange(100) < len(w)-5:
                     self.say('DID SOMEBODY SAY "'+w.upper()+'"??????', self.m['target'])
@@ -176,5 +176,5 @@ if __name__ == "__main__":
     class CmenBot(ChatterBot, DiceBot):
         ''' Our beloved cmenbot <3 '''
         pass
-    
+
     CmenBot().loop()
