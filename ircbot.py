@@ -4,6 +4,7 @@
 import socket
 import random
 import ast
+import unicodedata
 
 class IrcBot():
     def __init__(self, name="cmenbot", channels=['#notahashtag'],
@@ -35,6 +36,7 @@ class IrcBot():
                 args = data.split(None, 3)
                 if len(args) != 4:
                     continue
+                unicodedata.normalize('NFKD', data)
                 m = {}
                 m['sender'] = args[0][1:args[0][1:].find("!")+1] #unweirdify this
                 m['type']   = args[1]
@@ -131,6 +133,7 @@ class DiceBot(IrcBot):
                 output = str(ast.literal_eval(msg))
             except:
                 self.say("\u0001ACTION softly poots\u0001", self.m['target'])
+                return
             self.say("rolled: "+msg+" = "+output, self.m['target'])
 
 class ChatterBot(HelpBot):
@@ -161,7 +164,7 @@ class ChatterBot(HelpBot):
     def botsay(self):
         ''' #! to msg all channels. #target to message that target. '''
         msg = self.m['msg']
-        if self.m['target'] == self.name:
+        if self.m['target'] == self.m['sender']:
             if msg[0] == "#":
                 target = msg[1:].split()[0]
                 print(target)
