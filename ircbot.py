@@ -36,7 +36,7 @@ class IrcBot():
                 if len(args) != 4:
                     continue
                 m = {}
-                m['sender'] = args[0][1:m['sender'].find("!~")]
+                m['sender'] = args[0][1:args[0][1:].find("!")+1] #unweirdify this
                 m['type']   = args[1]
                 m['target'] = args[2]
                 m['msg']    = args[3][1:]
