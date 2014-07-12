@@ -59,9 +59,9 @@ class AcrotopiaBot(IrcBot):
             for i in range(1,random.randrange(5,9)):
                 self.sequence.append(letters[random.randrange(0,26)])
             self.say("Let's play Acrotopia! Just give me an acronym made from my"
-            +" sequence: " + " ".join(self.sequence), self.m['target'])
+            +" sequence: " + " ".join(self.sequence))
             self.say("To submit your acronym, just begin your message with !play"
-            +" and I'll check if it's valid.", self.m['target'])
+            +" and I'll check if it's valid.")
     def submit(self):
         msg = self.m['msg']
         sent = self.m['sender']
@@ -106,12 +106,12 @@ class AcrotopiaBot(IrcBot):
         if self.m['msg'] == "!endsubmit":
             self.loopfuncs.remove(self.submit)
             self.loopfuncs.remove(self.end)
-            self.say("Alright! The submission phase is over. Here's all I have: ", self.m['target'])
+            self.say("Alright! The submission phase is over. Here's all I have: ")
 
             for i in range(len(self.players)):
                 print(self.players[i])
                 self.say("%s. '%s'" % (str(i+1),  self.submits[i]))
-            self.say("Vote for a submission by saying !vote <number>.", self.m['target'])
+            self.say("Vote for a submission by saying !vote <number>.")
             self.loopfuncs.append(self.vote)
     def vote(self):
         msg = self.m['msg']
@@ -139,9 +139,9 @@ class AcrotopiaBot(IrcBot):
             self.loopfuncs.remove(self.endvote)
             self.loopfuncs.remove(self.vote)
             self.loopfuncs.append(self.acrogame)
-            self.say("Voting has ended and the results are in!", self.m['target'])
+            self.say("Voting has ended and the results are in!")
             for i in range(len(self.players)):
-                self.say("%s points: %s's '%s'." % (str(self.points[i]), self.players[i], self.submits[i]), self.m['target'])
+                self.say("%s points: %s's '%s'." % (str(self.points[i]), self.players[i], self.submits[i]))
             return
 
 if __name__ == "__main__":
