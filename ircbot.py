@@ -25,18 +25,18 @@ class IrcBot():
         while True:
             buf = self.socket.recv(4096)
             lines = buf.decode('UTF-8').split("\n")
-            for data in lines:
-                data = str(data).strip()
-                print("<--", data)
-                if not data:
+            for line in lines:
+                line = unicodedata.normalize('NFKD', str(line).strip())
+                print("<--", line)
+                if not line:
                     continue
-                if 'PING' in data:
-                    n = data.split(':')[1]
+                if 'PING' in line:
+                    n = line.split(':')[1]
                     self.send('PONG :' + n)
-                args = data.split(None, 3)
+                args = line.split(None, 3)
                 if len(args) != 4:
                     continue
-                unicodedata.normalize('NFKD', data)
+
                 m = {}
                 m['sender'] = args[0][1:args[0][1:].find("!")+1] #unweirdify this
                 m['type']   = args[1]
