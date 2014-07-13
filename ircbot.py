@@ -60,6 +60,8 @@ class IrcBot():
         if not to:
             to = self.channels
         for channel in to:
+            if msg[:4] == "/me ":
+                msg = "\u0001ACTION %s\u0001" % msg[4:]
             self.send("PRIVMSG " + channel + " :" + msg)
 
     def connect(self):
