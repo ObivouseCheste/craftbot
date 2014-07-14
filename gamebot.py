@@ -45,13 +45,13 @@ class AcrotopiaBot(IrcBot):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.loopfuncs.append(self.acrogame)
-        self.sequence = []
-        self.players = []
-        self.submits = []
-        self.points = []
     def acrogame(self):
         letters = list("abcdefghijklmnopqrstuvwxyz")
         if self.m['msg'] == "!initiate acrotopia":
+            self.sequence = []
+            self.players = []
+            self.submits = []
+            self.points = []
             print("Game initiation received")
             self.loopfuncs.append(self.submit)
             self.loopfuncs.remove(self.acrogame)
