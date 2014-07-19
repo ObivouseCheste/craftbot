@@ -1,293 +1,442 @@
-#cards against humanity irc bot
-#by amade and Bisukottishefu with help from the other Craftsmen
+#cards against humanity, irc bot, recoding
+#by amde with coding and support from the craftsmen
 
 import random
 #from path import path
 from ircbot import IrcBot
 
-class CahPlayer():
+class CahPlayer:
     def __init__(self, name):
         self.name = name
-        self.deck = []
+        self.hand = []
         self.points = 0
+        self.playedcard = ''
+        self.vote = '' #vote cast
+        self.votes = 0 #votes received
 
-    def addCard(self, cards = []):
-        for card in cards:
-            self.deck.extend(card)
+    def __eq__(self, other):
+        return self.name == other
 
-    def removeCard(self, card):
-        return self.deck.pop(card)
+    def __ne__(self, other):
+        return self.name != other
 
-    def getCards(self):
-        return self.deck
-
-    def changePoints(self, mod):
-        self.points += mod
-
-    def getPoints(self):
-        return self.points
-
-    def getName(self):
-        return self.name
+    def __ge__(self, other):
+        if isInstance(other, CahPlayer):
+            return self.points >= other.points
 
 class CahBot(IrcBot):
     def __init__(self, name = 'CahBot', **kwargs):
         super().__init__(name, **kwargs)
         self.loopfuncs.append(self.receiveMsg)
         #variable definitions
-        #self.game = False #whether a game is in progress
-        self.phase = 0 #phases: 0:no game, 1:waiting for players to join game, 2:waiting for players to play cards, 3:waiting for players to vote on cards
-        self.players = {}
-        self.playedcards = {}
-        self.votes = {}
-        self.questions = []
-        self.roundquestion = ""
-        self.answers = []
+        self.phase = 0 #0 = no game; 1 = wait for player join; 2 = wait for players to play cards; 3 = wait for players to vote on cards
         self.roundsleft = 0
-        
+        self.players = [] #list of players (CahPlayer class)
+        self.questions = [] #list of questions players can answer
+        self.answers = [] #list of answers players can receive to play
+        self.currentquestion = "" #the current round question
+        self.votingdict = {} #dictionary mapping player names to numbers
+        self.reversedict = {} #dictionary mapping numbers back to player names
+
     def receiveMsg(self):
-        msg = self.m['msg'].lower()
-        if msg == "!help" or msg == '!help ':
-            self.say('List of commands (enter !help commandname (e.g. !help startcah) to view detailed help about that command):')
-            self.say('!startcah !joingame !leavegame !loadquestions !loadanswers !startround !play !roundsleft !endround !vote !endcah')
-        if msg[0:7] == '!help !':
-            msg = msg[0:6] + msg[7:] #cut out the extra exclamation point - rest of this thread should proceed normally
-        if msg == '!help startcah':
-            self.say('Syntax: !startcah [rounds]')
-            self.say('Begins a new game of Cards Against Humanity that will last for a specified number of rounds. If no number of rounds is specified, 5 rounds will be played. After entering this command, players can join the game with the !joingame command. Once players have joined, enter !startround to advance to the first round.')
-        elif msg == '!help joingame':
-            self.say('Syntax: !joingame')
-        elif msg == '!help loadquestions':
-            self.say('Syntax: !loadquestions [clear] [deck1 deck2 deck3 ...]')
-            self.say('Enter clear as the first word after !loadquestions to overwrite the current loaded question decks. If no decks are specified, the default Cards Against Humanity deck will be loaded. This deck is also automatically loaded at the start of a game if no decks have been loaded yet. You can use !decks to obtain a list of available decks.')
-        elif msg == '!help leavegame':
-            self.say('Syntax: !leavegame')
-            self.say('This command will delete you from the game as a player. Note that you stop showing up in the scores if you do this.')
-        elif msg == '!help loadanswers':
-            self.say('Syntax: !loadquestions [clear] [deck1 deck2 deck3 ...]')
-            self.say('Enter clear as the first word after !loadquestions to overwrite the current loaded answer decks. If no decks are specified, the default Cards Against Humanity deck will be loaded. This deck is also automatically loaded at the start of a game if no decks have been loaded yet. You can use !decks to obtain a list of available decks.')
-        elif msg[0:9] == '!startcah' and self.phase == 0: #start a new game if there is none
-            msg = msg[10:]
-            rounds = None
-            if msg.isdigit():
-                rounds = int(msg)
-            self.startGame(rounds)
-        elif self.phase < 2: #game is not in play or vote phase
-            if msg[0:15] == '!loadquestions ':
-                msg = msg[15:].split()
-                clear = False
-                if msg[0] == 'clear':
-                    clear = True
-                    msg = msg[1:]
-                self.loadQuestionDecks(msg, clear)
-            elif msg[0:13] == '!loadanswers ':
-                msg = msg[13:].split()
-                clear = False
-                if msg[0] == 'clear':
-                    clear = True
-                    msg = msg[1:]
-                self.loadAnswerDecks(msg, clear)
-        elif self.phase != 0: #game is in progress
-            if msg[0:10] == '!leavegame':
-                self.removePlayer(self.m['sender'])
-            if msg[0:7] == '!endcah':
-                self.endGame()
-            if msg[:11] == '!roundsleft':
-                self.say("There are currently " + self.roundsleft + " rounds left.")
-        if self.phase == 1: #waiting for players to join game
-            #for now players can only join before the game starts. ideally this will change in the future
-            if msg[0:9] == '!joingame':
-                self.addPlayer(self.m['sender'])
-            if msg[0:11] == '!startround':
-                self.startRound()
-        elif self.phase == 2: #waiting for players to play cards
-            if msg[0:6] == '!play ':
-                msg = msg[6:]
-                player = self.players[self.m['sender']]
-                if not player:
-                    self.say('You aren\'t in this game!', self.m['sender'])
-                msg = msg[6:]
-                if msg.isdigit() and msg <= 5: #play card by number
-                    card = player.removeCard(msg)
-                    self.playedcards[player] = card
-                    self.checkPhaseEnd()
-                else: #play card by name
-                    cards = player.getCards()
-                    selected = None
-                    for card in cards:
-                        if card.lower() == msg:
-                            selected = card
-                            break
-                    if not selected:
-                        self.say('Could not find card "' + msg + '"', self.m['sender'])
-                    else:
-                        self.playedcards[player] = card
-                        self.checkPhaseEnd()
-                #else: #error
-                    #self.say('Error in reading play. You may want to try entering !help play', self.m['sender'])
-        elif self.phase == 3: #waiting for players to vote on cards
-            if msg[0:6] == '!vote ':
-                msg = msg[6:]
-                if msg.isdigit(): #vote by number
-                    self.votes[self.m['sender']] = msg
-                    i = 1
-                    pickedcard = ''
-                    for player, card in self.playedcard:
-                        i += 1
-                        if i == msg:
-                            pickedcard = card
-                    if not len(pickedcard):
-                        self.say('Couldn\'t find card ' + msg + '. Please confirm that your number corresponds to a played card.', self.m['sender'])
-                    else:
-                        self.say('Vote for "' + self.playedcard[msg] + '" acknowledged.', self.m['sender'])
-                else: #didn't give us a number
-                    self.say('Please vote by entering the number corresponding to your choice.', self.m['sender'])
-
-    def addPlayer(self, playername):
-        for name, player in self.players.items(): #ValueError: too many values to unpack (expected 2)
-            if player.getName() == playername:
-                self.say('You are already in this game.')
-                return False
-        self.players[playername] = CahPlayer(playername)
-        self.dealCards([self.players[playername]], 5)
-
-    def removePlayer(self, playername):
-        del self.players[playername]
-
-    def errorMsg(self, reason):
-        self.say('/me softly poots a ' + reason + ' flavored poot')
-        #the following should go in any exception catchin things:
-        #reason = sys.exc_info()[0]
-        #errorMsg(reason)
-                  
-    def startGame(self, rounds = 5):
-        if(self.phase == 0):
-            self.phase = 1
-            if len(self.questions) == 0:
-                self.loadQuestionDecks()
-            if len(self.answers) == 0:
-                self.loadAnswerDecks()
-            self.say("A game of Cards Against Humanity / Apples to Apples / Tiramisu is starting! Enter !joingame to join, or !help for help.")
-            #start a timer here that waits until the game starts
-
-    def startRound(self):
-        self.roundsleft -= 1
-        self.say("A new round has started! The question for this round is:")
-        self.roundquestion = random.choice(self.questions)
-        self.questions.remove(self.roundquestion)
-        self.say(self.roundquestion)
-        self.phase = 2
-
-    def checkPhaseEnd(self):
-        end = True
-        if phase == 2: #play cards phase: ends when all players have played a card
-            for player in self.players:
-                if not self.playedcard[player]:
-                    end = False
-                    break
-            if end:
-                self.endRound()
-        elif phase == 3: #vote on cards phase: ends when all players have voted
-            for player in self.players:
-                if not self.votes[player]:
-                    end = False
-                    break
-            if end:
-                self.endVoting()
-
-    def endRound(self):
-        '''End the play cards phase and begin the voting phase'''
-        count = 1
-        self.say('The cards are in! Vote with !vote X where X is the number of your choice for the card you think best answers or completes this sentence:')
-        self.say(self.roundquestion)
-        self.questions.add(self.roundquestion) #replace this question in the deck of questions
-        for player, card in self.playedcard.items():
-            self.say(count + '. ' + card)
-            count += 1
-
-    def endVoting(self):
-        '''End the voting phase and either start a new round or end the game'''
-        votecount = {}
-        for player, vote in self.votes.items():
-            votecount[vote] += 1
-        winners = []
-        highest = 0
-        for answer, tally in votecount.items():
-            if tally > highest:
-                highest = tally
-                winners = [answer]
-            elif tally == highest:
-                winners.extend(answer)
-        self.say('Winner(s) of this round:')
-        for winner in winners:
-            for player, card in self.playedcards.items():
-                if card == winner:
-                    self.players[player].changePoints(1) #give a point
-                    self.say(player)
-        for player, card in self.playedcards.items():
-            self.answers.add(card)
-            self.players[player].removeCard(card)
-            self.dealCard(self.players[player], 1)
-        if self.roundsleft > 0:
-            self.startRound()
-        else:
+        '''Message handler. See IrcBot.loop'''
+        msg = self.m['msg']
+        if msg[0:5] == '!help':
+            msg = msg[6:]
+            #remove extra leading ! if present
+            if len(msg) > 0 and msg[0] == '!':
+                msg = msg[1:]
+            if not msg.strip(): #message consists only of whitespace: display general help
+                self.say('Function list: !startcah [rounds], !joingame, !leavegame, !hand, !roundsleft, !play [card], !endround, !vote [number], !endvote, !scores, !endgame, !loadquestions [*clear deck1 deck2...], !loadanswers [*clear deck1 deck2...]', self.m['target'])
+                self.say('Enter !help [function name] to learn more about a function, e.g. !help startcah', self.m['target'])
+            elif msg[0:8] == 'startcah':
+                self.say('Syntax: !startcah [rounds]. Starts a new game of Cards Against Humanity with the specified number of rounds (5 if not specified). Example: !startcah 15', self.m['target'])
+            elif msg[0:8] == 'joingame':
+                self.say('Syntax: !joingame. Adds you to the current game. Example: !joingame', self.m['target'])
+            elif msg[0:4] == 'hand':
+                self.say('Syntax: !hand. Shows you all cards currently in your hand. Example: !hand', self.m['target'])
+            elif msg[0:10] == 'roundsleft':
+                self.say('Syntax: !roundsleft. Shows you how many rounds are left in the current game.', self.m['target'])
+            elif msg[0:10] == 'startround':
+                self.say('Syntax: !startround. Begins a round by giving the players a question and allowing them to play cards to answer it. Example: !startround', self.m['target'])
+            elif msg[0:4] == 'play':
+                self.say('Syntax: !play [card]. Plays the specified card as an answer to the round question. The card can either be the number corresponding to the card\'s position in your hand (try !hand) or the text of the card itself (make sure to be exact). Example: !play 1', self.m['target'])
+            elif msg[0:8] == 'endround':
+                self.say('Syntax:: !endround. Causes the current round to come to an end, beginning a voting round for the best answer. Example: !endround', self.m['target'])
+            elif msg[0:4] == 'vote':
+                self.say('Syntax: !vote [number]. Casts your vote for an answer with the specified number. Please don\'t vote for yourself! Example: !vote 1', self.m['target'])
+            elif msg[0:7] == 'endvote':
+                self.say('Syntax: !endvote. Forces voting to come to an end, causing the next round to start or the game to end, depending on if there are rounds left (try !roundsleft). Example: !endvote', self.m['target'])
+            elif msg[0:6] == 'scores':
+                self.say('Syntax: !scores. Shows you the current scores of all active players. Example: !scores', self.m['target'])
+            elif msg[0:7] == 'endgame':
+                self.say('Syntax: !endgame. Forces an end to the current game. Example: !endgame', self.m['target'])
+            elif msg[0:13] == 'loadquestions':
+                self.say('Syntax: !loadquestions [*clear deck1 deck2...]. Use "clear" as the first word if you want to clear the current decks, and attempt to load a deck for each word specified other than clear, if applicable. Example: !loadanswers clear cardsagainsthumanity craftsmen', self.m['target'])
+            elif msg[0:11] == 'loadanswers':
+                self.say('Syntax: !loadanswers [*clear deck1 deck2...]. Use "clear" as the first word if you want to clear the current decks, and attempt to load a deck for each word specified other than clear, if applicable. Example: !loadanswers clear cardsagainsthumanity craftsmen', self.m['target'])
+        elif msg[0:9] == '!startcah':
+            self.startGame(msg[10:])
+        elif msg[0:9] == '!joingame':
+            self.addPlayer(self.m['sender'])
+        elif msg[0:10] == '!leavegame':
+            self.removePlayer(self.m['sender'])
+        elif msg[0:5] == '!hand':
+            self.getHand(self.m['sender'])
+        elif msg[0:11] == '!roundsleft':
+            self.getRoundsLeft(self.m['target'])
+        elif msg[0:11] == '!startround':
+            self.startAnsweringRound()
+        elif msg[0:5] == '!play':
+            self.playCard(self.m['sender'], msg[6:])
+        elif msg[0:9] == '!endround' or msg[0:10] == '!startvote':
+            self.startVotingRound()
+        elif msg[0:5] == '!vote':
+            self.vote(self.m['sender'], msg[6:])
+        elif msg[0:8] == '!endvote':
+            self.endVoting()
+        elif msg[0:7] == '!scores':
+            self.say('Current scores:')
+            self.displayScores()
+        elif msg[0:8] == '!endgame':
             self.endGame()
+        elif msg[0:14] == '!loadquestions':
+            msg = msg[15:].split()
+            clear = msg[0] == 'clear'
+            if clear:
+                msg = msg[1:]
+            self.loadQuestionDecks(msg, clear)
+        elif msg[0:12] == '!loadanswers':
+            msg = msg[13:].split()
+            clear = msg[0] == 'clear'
+            if clear:
+                msg = msg[1:]
+            self.loadAnswerDecks(msg, clear)
 
-    def endGame(self):
-        if self.phase != 0:
-            self.announceScores()
-            self.phase = 0
-            self.players = {}
-            self.roundsleft = 0
-            self.say("Game over! Say !startcah to make a new one.")
-
-    def announceScores(self):
-        if(self.phase != 0):
-            victors = []
-            count = 1
-            for player in self.players:
-                victors += player
-            self.say("Current scores:")
-            while len(victors) > 0:
-                winner = victors[0]
-                for player in victors:
-                    if player.getPoints() > winner.getPoints():
-                        winner = player
-                victors.remove(winner)
-                self.say(count + ". " + victors.getName())
-                count += 1
-
-    def loadQuestionDecks(self, files = ["./CAH decks/questions/cardsagainsthumanity.txt"], clear = True):
+    def loadQuestionDecks(self, files = ['cardsagainsthumanity'], clear = True):
         #load question decks for playing.
         if clear == True:
             self.questions = []
         for filenames in files:
-            lines = open(filenames, 'r')
-            self.questions.extend(lines.read().split("\n"))
-            self.say("Loaded question deck " + filenames)
+            try:
+                lines = open('./CAH decks/questions/' + filenames + '.txt', 'r')
+                self.questions.extend(lines.read().split("\n"))
+                self.say('Loaded question deck: ' + filenames)
+            except:
+                self.say('Could not find file "' + filenames + '"')
 
-    def loadAnswerDecks(self, files = ["./CAH decks/answers/cardsagainsthumanity.txt"], clear = True):
+    def loadAnswerDecks(self, files = ['cardsagainsthumanity'], clear = True):
         #load answer decks for playing.
         if clear == True:
             self.answers = []
         for filenames in files:
-            lines = open(filenames, 'r')
-            self.answers.extend(lines.read().split("\n"))
-            self.say("Loaded answer deck " + filenames)
+            try:
+                lines = open('./CAH decks/answers/' + filenames + '.txt', 'r')
+                self.answers.extend(lines.read().split("\n"))
+                self.say('Loaded answer deck: ' + filenames)
+            except:
+                self.say('Could not find file "' + filenames + '"')
 
-    def dealCards(self, players = [], number = 1):
-        #deal number cards each to players
-        for player in players:
-            for i in range(number):
-                card = random.choice(self.answers)
-                self.answers.remove(card)
-                player.addCard(card)
-                self.say('You received this card: ' + card, player.getName())
-            
-    #def listDecks(self):
-        #list the decks that can be loaded
-        #for files in path('/CAH decks').files(pattern='*.txt'):
-            #list decks here lol
-        
+    def addPlayer(self, name):
+        '''Add a player to the game.'''
+        if self.phase == 0: #no game in progress
+            self.say('There is not currently a game in progress! Use !startcah [rounds] to start a new game.', self.m['target'])
+            return
+        for player in self.players:
+            if player == name:
+                self.say('You are already in this game!', name)
+                return
+        player = CahPlayer(name)
+        self.players.append(player)
+        self.dealCard(name, 5) #deal initial hand
+
+    def removePlayer(self, name):
+        '''Remove a player from the game.'''
+        for player in self.players:
+            if player == name:
+                #return hand to deck
+                for card in player.hand:
+                    self.answers.append(card)
+                self.players.remove(player)
+                self.say('You have been removed from this game.', name)
+                return
+        self.say('You are not in this game!', name)
+
+    def dealCard(self, name, num = 1):
+        '''Deal cards to a player.'''
+        playerObj = None
+        for player in self.players:
+            if player == name:
+                playerObj = player
+                break
+        if not playerObj: #player not found
+            self.say('You are not in this game!', name)
+            return
+        for i in range(num):
+            card = random.choice(self.answers)
+            self.answers.remove(card)
+            playerObj.hand.append(card)
+            self.say('Dealt card: (#' + str(len(playerObj.hand)) + ') ' + card, name)
+
+    def getHand(self, name):
+        '''Show a player his or her hand.'''
+        playerObj = None
+        for player in self.players:
+            if player == name:
+                playerObj = player
+                break
+        if not playerObj: #player not found
+            self.say('You are not in this game!', name)
+            return
+        i = 1
+        for card in playerObj.hand:
+            self.say('(#' + str(i) + ') ' + card, name)
+            i += 1
+        if playerObj.playedcard:
+            self.say('(Played card) ' + playerObj.playedcard, name)
+
+    def startGame(self, rounds = 5):
+        '''Begin a game (move from phase 0 to 1).'''
+        if self.phase == 0:
+            if not self.questions:
+                self.loadQuestionDecks()
+            if not self.answers:
+                self.loadAnswerDecks()
+            self.say('A new game of Cards Against Humanity is starting! Enter !joingame to join.')
+            if not rounds:
+                rounds = 5
+            self.roundsleft = 5
+            self.phase = 1
+        else:
+            self.say('A game is already in progress!', self.m['target'])
+
+    def getRoundsLeft(self, to):
+        self.say('Rounds remaining in this game: ' + str(self.roundsleft), to)
+
+    def startAnsweringRound(self):
+        '''Start an answering round (move from phase 1 or 3 to 2).'''
+        if self.phase != 1 and self.phase != 3:
+            self.say('This is not an appropriate time to start a round!', self.m['target'])
+            return
+        #clear any votes left over from any previous rounds
+        for player in self.players:
+            player.vote = ''
+        self.phase = 2
+        self.roundsleft -= 1
+        self.currentquestion = random.choice(self.questions)
+        self.say('A new round is starting! Use !play [card] to play the card that you think best answers or completes this sentence:')
+        self.say(self.currentquestion)
+
+    def playCard(self, name, card):
+        '''Play a card (phase 2 only).'''
+        playerObj = None
+        for player in self.players:
+            if player == name:
+                playerObj = player
+                break
+        if not playerObj: #player not found
+            self.say('You are not in this game!', name)
+            return
+        if self.phase != 2:
+            self.say('Now is not an appropriate time to play a card!', name)
+            return
+        if card.isdigit():
+            card = int(card)
+            if card < 1 or card > 5:
+                self.say('Please enter a number between 1 and 5.', name)
+                return
+            card -= 1 #the price of non-programmer-friendliness
+            if playerObj.playedcard: #player has already played a card
+                playerObj.hand.append(playerObj.playedcard)
+                self.say('Unplayed card "' + playerObj.playedcard + '"', name)
+            playerObj.playedcard = playerObj.hand[card]
+            playerObj.hand.remove(playerObj.playedcard)
+            self.say('Played card "' + playerObj.playedcard + '"', name)
+            self.checkAnswers()
+        else:
+            if playerObj.playedcard: #player has already played a card
+                playerObj.hand.append(playerObj.playedcard)
+                self.say('Unplayed card "' + playerObj.playedcard + '"', name)
+                playerObj.playedcard = ''
+            for cards in playerObj.hand:
+                if card.lower() == cards.lower():
+                    playerObj.playedcard = cards
+                    break
+            if not playerObj.playedcard:
+                self.say('Could not find card "' + card + '"', name)
+                return
+            playerObj.hand.remove(playerObj.playedcard)
+            self.say('Played card "' + playerObj.playedcard + '"', name)
+            self.checkAnswers()
+
+    def checkAnswers(self):
+        '''Check if all players have played a card.'''
+        for player in self.players:
+            if not player.playedcard:
+                return
+        self.startVotingRound()
+
+    def startVotingRound(self):
+        '''End an answering round and begin voting on best answers (move from phase to 3).'''
+        if self.phase != 2:
+            self.say('This is not the appropriate time to start voting!', self.m['target'])
+            return
+        self.say('Use !vote [name] to vote for the answer you think best answers or completes this question!:')
+        self.say(self.currentquestion)
+        #map player names to numbers (and back also) so that players don't know who they're voting for
+        i = 1
+        for player in self.players:
+            self.votingdict[player.name] = i
+            self.reversedict[i] = player.name
+            i += 1
+        #list choices
+        for player in self.players:
+            if player.playedcard:
+                self.say('(#' + str(self.votingdict[player.name]) + ') ' + player.playedcard)
+                self.dealCard(player.name)
+        self.phase = 3
+
+    def vote(self, voter, ballot):
+        '''Register a player's vote.'''
+        if self.phase != 3:
+            self.say('This is not the appropriate time to vote on answers!', voter)
+            return
+        if not ballot.isdigit():
+            self.say('Please enter a number.', voter)
+            return
+        ballot = int(ballot)
+        #check that this ballot is valid
+        if not ballot in self.reversedict.keys():
+            self.say('There is no answer for #' + str(ballot) + '.', voter)
+            return
+        #find the voter's and selected player's (ballot's) player objects
+        voterObj = None
+        ballotObj = None
+        for player in self.players:
+            if player == voter:
+                voterObj = player
+            if player == self.reversedict[ballot]:
+                if self.reversedict[ballot] == voter and len(self.players) > 2:
+                    self.say(voter + ', don\'t vote for yourself, you killjoy!')
+                    return
+                ballotObj = player
+        if not voterObj:
+            self.say('You are not in this game!', voter)
+            return
+        if not ballotObj:
+            self.say('Could not find a player with the number #' + str(ballot) + '.', voter)
+            return
+        #undo a vote if one has been cast (don't need to worry about not finding a player: if that happens, the player has left the game)
+        if voterObj.vote:
+            for player in self.players:
+                if player == voterObj.vote:
+                    player.votes -= 1
+                    self.say('Unregistered vote for #' + str(self.votingdict[voterObj.vote]) + '.', voter)
+        #register the vote
+        voterObj.vote = self.reversedict[ballot]
+        ballotObj.votes += 1
+        self.say('Registered vote for #' + str(ballot) + ': ' + ballotObj.playedcard, voter)
+        self.checkVotes()
+
+    def checkVotes(self):
+        '''Check if all players have voted.'''
+        for player in self.players:
+            if not player.vote:
+                return
+        self.endVoting()
+
+    def endVoting(self):
+        '''Display the answers that received the most votes during this round, and allocate points to the winner(s).'''
+        if self.phase != 3:
+            self.say('This is not the appropriate time to end voting!', self.m['target'])
+            return
+        scorelist = []
+        playerlist = []
+        #copy the player list
+        for player in self.players:
+            playerlist.append(player)
+        #sort the list and assemble output
+        i = 1
+        while len(playerlist) > 0:
+            highscore = 0
+            highscorers = []
+            removed = []
+            for player in playerlist:
+                if player.votes > highscore: #new highscore
+                    highscore = player.votes
+                    highscorers = []
+                    removed = []
+                    highscorers.append(str(i) + '. ' + player.name + ' (' + str(player.votes) + ' votes): ' + player.playedcard)
+                    removed.append(player)
+                elif player.votes == highscore: #tie
+                    highscorers.append(str(i) + '. ' + player.name + ' (' + str(player.votes) + ' votes): ' + player.playedcard)
+                    removed.append(player)
+            for playerObj in removed:
+                playerlist.remove(playerObj)
+                if i == 1: #high scorer(s) of this round
+                    playerObj.points += 1
+            scorelist.extend(highscorers)
+            i += len(removed)
+        #display
+        self.say('Round scores:')
+        for line in scorelist:
+            self.say(line)
+        #clear answers and votes and replenish hands
+        self.votingdict = {}
+        self.reversedict = {}
+        for player in self.players:
+            player.playedcard = ''
+            player.vote = ''
+            player.votes = 0
+        #move on
+        if self.roundsleft > 0:
+            self.startAnsweringRound()
+        else:
+            self.endGame()
+
+    def displayScores(self):
+        '''Display the cumulative scores of all players from this game.'''
+        scorelist = []
+        playerlist = []
+        #copy the player list
+        for player in self.players:
+            playerlist.append(player)
+        #sort the list and assemble output
+        i = 1
+        while len(playerlist) > 0:
+            highscore = 0
+            highscorers = []
+            removed = []
+            for player in playerlist:
+                if player.points > highscore:
+                    highscore = player.points
+                    highscorers = []
+                    removed = []
+                    highscorers.append(str(i) + '. ' + player.name + ' (' + str(player.points) + ' pts)')
+                    removed.append(player)
+                elif player.points == highscore:
+                    removed.append(player)
+                    highscorers.append(str(i) + '. ' + player.name + ' (' + str(player.points) + ' pts)')
+            for playerObj in removed:
+                playerlist.remove(playerObj)
+            scorelist.extend(highscorers)
+            i += len(removed)
+        #display
+        for line in scorelist:
+            self.say(line)
+
+    def endGame(self):
+        '''End a game.'''
+        if self.phase != 3:
+            self.say('Now is not an appropriate time to end the game!', self.m['target'])
+        self.phase = 0
+        self.say('Game over! Final scores:')
+        self.displayScores()
+        #dump data
+        for player in self.players:
+            for card in player.hand:
+                self.answers.append(card)
+        self.players = []
+
 if __name__ == "__main__":
     CahBot('CahBot').loop()
