@@ -11,6 +11,7 @@ class CahPlayer:
         self.hand = []
         self.points = 0
         self.playedcard = ''
+        self.playedcardnum = 5 #number of last played card, so that the new one can be placed in the hand in this position
         self.vote = '' #vote cast
         self.votes = 0 #votes received
 
@@ -162,7 +163,7 @@ class CahBot(IrcBot):
                 return
         self.say('You are not in this game!', name)
 
-    def dealCard(self, name, num = 1):
+    def dealCard(self, name, num = 1, *pos):
         '''Deal cards to a player.'''
         playerObj = None
         for player in self.players:
@@ -195,7 +196,7 @@ class CahBot(IrcBot):
         if playerObj.playedcard:
             self.say('(Played card) ' + playerObj.playedcard, name)
 
-    def startGame(self, rounds = 5):
+    def startGame(self, rounds):
         '''Begin a game (move from phase 0 to 1).'''
         if self.phase == 0:
             if not self.questions:
@@ -203,9 +204,13 @@ class CahBot(IrcBot):
             if not self.answers:
                 self.loadAnswerDecks()
             self.say('A new game of Cards Against Humanity is starting! Enter !joingame to join.')
-            if not rounds:
+            if rounds.isdigit():
+                rounds = int(rounds)
+                if rounds < 1:
+                    rounds = 5
+            else:
                 rounds = 5
-            self.roundsleft = 5
+            self.roundsleft = rounds
             self.phase = 1
         else:
             self.say('A game is already in progress!', self.m['target'])
@@ -240,7 +245,7 @@ class CahBot(IrcBot):
         if self.phase != 2:
             self.say('Now is not an appropriate time to play a card!', name)
             return
-        if card.isdigit():
+        if card.isdigit(): #play by number
             card = int(card)
             if card < 1 or card > 5:
                 self.say('Please enter a number between 1 and 5.', name)
@@ -248,12 +253,13 @@ class CahBot(IrcBot):
             card -= 1 #the price of non-programmer-friendliness
             if playerObj.playedcard: #player has already played a card
                 playerObj.hand.append(playerObj.playedcard)
-                self.say('Unplayed card "' + playerObj.playedcard + '"', name)
+                self.say('Unplayed card "' + playerObj.playedcard + '" now at (#5)', name)
+            player.playedcardnum = card
             playerObj.playedcard = playerObj.hand[card]
             playerObj.hand.remove(playerObj.playedcard)
             self.say('Played card "' + playerObj.playedcard + '"', name)
             self.checkAnswers()
-        else:
+        else: #play by name
             if playerObj.playedcard: #player has already played a card
                 playerObj.hand.append(playerObj.playedcard)
                 self.say('Unplayed card "' + playerObj.playedcard + '"', name)
@@ -293,7 +299,7 @@ class CahBot(IrcBot):
         for player in self.players:
             if player.playedcard:
                 self.say('(#' + str(self.votingdict[player.name]) + ') ' + player.playedcard)
-                self.dealCard(player.name)
+                self.dealCard(player.name, 1, player.playedcardnum)
         self.phase = 3
 
     def vote(self, voter, ballot):
@@ -427,8 +433,8 @@ class CahBot(IrcBot):
 
     def endGame(self):
         '''End a game.'''
-        if self.phase != 3:
-            self.say('Now is not an appropriate time to end the game!', self.m['target'])
+        #if self.phase != 3:
+            #self.say('Now is not an appropriate time to end the game!', self.m['target'])
         self.phase = 0
         self.say('Game over! Final scores:')
         self.displayScores()
